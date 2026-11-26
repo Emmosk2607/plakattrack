@@ -54,15 +54,23 @@ async function loadRangliste() {
   try {
     const { data } = await supabase.from('einreichungen').select('mitarbeiter,anzahl,created_at').order('created_at', { ascending: false });
     const all = data || [];
-    if (!all.length) return;
+    renderMotm(all);
+    // Rangliste nur fuer den aktuellen Monat
+    const now = new Date();
+    const monthRows = all.filter(e => {
+      const c = new Date(e.created_at);
+      return c.getFullYear() === now.getFullYear() && c.getMonth() === now.getMonth();
+    });
+    const tEl = $('#rang-title');
+    if (tEl) tEl.textContent = `🏆 Rangliste · ${MONATE[now.getMonth()]}`;
+    if (!monthRows.length) { $('#rangliste-card').style.display = 'none'; return; }
     const today = new Date().toLocaleDateString('de-DE');
     const totals = {}, todayMap = {};
-    all.forEach(e => {
+    monthRows.forEach(e => {
       totals[e.mitarbeiter] = (totals[e.mitarbeiter] || 0) + (e.anzahl || 0);
       if (new Date(e.created_at).toLocaleDateString('de-DE') === today)
         todayMap[e.mitarbeiter] = (todayMap[e.mitarbeiter] || 0) + (e.anzahl || 0);
     });
-    renderMotm(all);
     const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
     const max = sorted[0][1] || 1;
     const medals = ['🥇', '🥈', '🥉'];
