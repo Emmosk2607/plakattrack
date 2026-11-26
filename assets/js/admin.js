@@ -341,24 +341,25 @@ function invoice(firmaId) {
 
 /* ---------- KARTE ---------- */
 function renderMap() {
-  // Nur aktive (nicht beendete) Veranstaltungen
+  // Nur aktive (nicht beendete) Veranstaltungen beruecksichtigen
   const activeNames = new Set(events.filter(e => (e.status ?? 'aktiv') !== 'beendet').map(e => e.name));
-  // Feste Farbe je Event
-  const sorted = [...activeNames].sort();
-  const colorOf = {};
-  sorted.forEach((n, i) => { colorOf[n] = EVENT_COLORS[i % EVENT_COLORS.length]; });
 
-  // GPS-Punkte je aktivem Event sammeln
-  const byEvent = {};
+  // Feste Farben je Mitarbeiter (weitere bekommen automatisch eine aus der Palette)
+  const MA_COLORS = { 'Jerry': '#3257e8', 'Nenad': '#d8442f', 'Joschi': '#1f9d57' };
+  let palIdx = 0;
+  const colorOf = (name) => MA_COLORS[name] || (MA_COLORS[name] = EVENT_COLORS[palIdx++ % EVENT_COLORS.length]);
+
+  // GPS-Punkte je Mitarbeiter (nur aus aktiven Events)
+  const byMa = {};
   einr.forEach(e => {
     if (!activeNames.has(e.event_name)) return;
     (e.foto_meta || []).forEach(m => {
-      if (m?.gps?.lat != null) (byEvent[e.event_name] ??= []).push({ lat: m.gps.lat, lon: m.gps.lon, ma: e.mitarbeiter });
+      if (m?.gps?.lat != null) (byMa[e.mitarbeiter] ??= []).push({ lat: m.gps.lat, lon: m.gps.lon, ev: e.event_name });
     });
   });
 
-  const totalPts = Object.values(byEvent).reduce((s, a) => s + a.length, 0);
-  $('#map-count').textContent = `${totalPts} Fotos · ${Object.keys(byEvent).length} aktive Events`;
+  const totalPts = Object.values(byMa).reduce((s, a) => s + a.length, 0);
+  $('#map-count').textContent = `${totalPts} Fotos · ${Object.keys(byMa).length} Mitarbeiter`;
 
   if (!map) {
     map = L.map('map').setView([51.96, 7.63], 11); // Münster
@@ -368,22 +369,22 @@ function renderMap() {
   mapLayer = L.layerGroup().addTo(map);
 
   const bounds = [];
-  Object.entries(byEvent).forEach(([name, pts]) => {
-    const col = colorOf[name];
+  Object.entries(byMa).forEach(([ma, pts]) => {
+    const col = colorOf(ma);
     pts.forEach(p => {
       L.circleMarker([p.lat, p.lon], { radius: 6, color: col, fillColor: col, fillOpacity: .75, weight: 1 })
-        .bindPopup(`<b>${escapeHtml(name)}</b><br>${escapeHtml(p.ma)}`).addTo(mapLayer);
+        .bindPopup(`<b>${escapeHtml(ma)}</b><br>${escapeHtml(p.ev)}`).addTo(mapLayer);
       bounds.push([p.lat, p.lon]);
     });
   });
   if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
 
-  // Legende mit Zählung je Event (meiste zuerst)
-  const legend = Object.entries(byEvent)
+  // Legende mit Zählung je Mitarbeiter (meiste zuerst)
+  const legend = Object.entries(byMa)
     .sort((a, b) => b[1].length - a[1].length)
-    .map(([name, pts]) => `<span class="pill" style="background:var(--surface-2)">
-      <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${colorOf[name]}"></span>
-      ${escapeHtml(name)}: <b>${pts.length}</b></span>`).join(' ');
+    .map(([ma, pts]) => `<span class="pill" style="background:var(--surface-2)">
+      <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${colorOf(ma)}"></span>
+      ${escapeHtml(ma)}: <b>${pts.length}</b></span>`).join(' ');
   const host = $('#map-legend');
   if (host) host.innerHTML = legend || '<span class="muted">Keine aktiven Veranstaltungen mit GPS-Fotos.</span>';
 
