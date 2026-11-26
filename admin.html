@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlakatTrack – Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📌</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="brand"><span class="brand__logo">📌</span><span>PlakatTrack<small>Admin-Bereich</small></span></div>
+    <span class="app-header__spacer"></span>
+    <button class="btn btn--sm btn--ghost" id="theme-btn" title="Hell/Dunkel">🌓</button>
+    <a class="btn btn--sm" href="index.html">Einreichen</a>
+    <button class="btn btn--sm hidden" id="logout-btn">Abmelden</button>
+  </div>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section id="login-view">
+    <div class="card" style="max-width:440px;margin:40px auto">
+      <h2>Admin-Anmeldung</h2>
+      <p class="sub">Melde dich mit deinem Konto an. Noch keins? Unten ein Konto anlegen.</p>
+      <label class="field"><span class="field__label">E-Mail</span><input type="email" id="login-email" autocomplete="username"></label>
+      <label class="field"><span class="field__label">Passwort</span><input type="password" id="login-pw" autocomplete="current-password"></label>
+      <div class="msg msg--error hidden" id="login-err"></div>
+      <div class="msg msg--info hidden" id="login-info"></div>
+      <button class="btn btn--primary btn--block" id="login-btn">Anmelden</button>
+      <div class="flex mt" style="justify-content:center">
+        <button class="btn btn--ghost btn--sm" id="signup-btn">Konto anlegen</button>
+        <button class="btn btn--ghost btn--sm" id="resend-btn">Bestätigung erneut senden</button>
+      </div>
+      <p class="muted center mt" style="font-size:12px">Hinweis: Nach dem Anlegen bekommst du eine Bestätigungs-E-Mail. Erst nach dem Klick darin ist der Login möglich.</p>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="admin-view" class="hidden">
+    <div class="tabs" id="tabs">
+      <button data-tab="einreichungen" class="active">Einreichungen</button>
+      <button data-tab="events">Veranstaltungen</button>
+      <button data-tab="mitarbeiter">Mitarbeiter</button>
+      <button data-tab="zahlungen">Zahlungen</button>
+      <button data-tab="firmen">Firmen</button>
+      <button data-tab="karte">Karte</button>
+    </div>
+
+    <!-- EINREICHUNGEN -->
+    <div class="tab-panel" data-panel="einreichungen">
+      <div class="stats" id="stats"></div>
+      <div class="card">
+        <div class="flex" style="margin-bottom:14px">
+          <h2 style="margin:0">Einreichungen</h2><span class="spacer"></span>
+          <input type="text" id="filter-input" placeholder="Suchen (Mitarbeiter/Event) …" style="max-width:260px">
+          <button class="btn btn--sm" id="export-btn">⬇ Excel</button>
+          <button class="btn btn--sm" id="reload-btn">↻ Aktualisieren</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Mitarbeiter</th><th>Veranstaltung</th><th>Plakate</th><th>Fotos</th><th>Warnungen</th><th>Zeit</th><th></th></tr></thead>
+            <tbody id="einr-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="tab-panel hidden" data-panel="events">
+      <div class="card">
+        <h2>Veranstaltung anlegen</h2>
+        <div class="row cols-3">
+          <label class="field"><span class="field__label">Name</span><input type="text" id="ev-name"></label>
+          <label class="field"><span class="field__label">Bestand (Plakate)</span><input type="number" id="ev-bestand" value="0"></label>
+          <label class="field"><span class="field__label">Firma (optional)</span><select id="ev-firma"><option value="">—</option></select></label>
+        </div>
+        <button class="btn btn--primary" id="ev-add">Hinzufügen</button>
+      </div>
+      <div class="card">
+        <h2>Veranstaltungen</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>Bestand</th><th>Eingereicht</th><th>Status</th><th>Firma</th><th></th></tr></thead>
+          <tbody id="events-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- MITARBEITER -->
+    <div class="tab-panel hidden" data-panel="mitarbeiter">
+      <div class="card">
+        <h2>Mitarbeiter anlegen</h2>
+        <div class="flex">
+          <input type="text" id="ma-name" placeholder="Name" style="max-width:280px">
+          <button class="btn btn--primary" id="ma-add">Hinzufügen</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Mitarbeiter</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>Einreichungen</th><th>Plakate gesamt</th><th></th></tr></thead>
+          <tbody id="ma-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ZAHLUNGEN -->
+    <div class="tab-panel hidden" data-panel="zahlungen">
+      <div class="card">
+        <h2>Zahlung erfassen</h2>
+        <div class="row cols-3">
+          <label class="field"><span class="field__label">Mitarbeiter</span><select id="za-ma"><option value="">—</option></select></label>
+          <label class="field"><span class="field__label">Betrag (€)</span><input type="number" id="za-betrag" step="0.01"></label>
+          <label class="field"><span class="field__label">Notiz</span><input type="text" id="za-notiz"></label>
+        </div>
+        <button class="btn btn--primary" id="za-add">Speichern</button>
+      </div>
+      <div class="card">
+        <h2>Zahlungen</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mitarbeiter</th><th>Betrag</th><th>Notiz</th><th>Datum</th><th></th></tr></thead>
+          <tbody id="za-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- FIRMEN -->
+    <div class="tab-panel hidden" data-panel="firmen">
+      <div class="card">
+        <h2>Firma anlegen</h2>
+        <div class="row cols-2">
+          <label class="field"><span class="field__label">Name</span><input type="text" id="fi-name"></label>
+          <label class="field"><span class="field__label">E-Mail</span><input type="email" id="fi-email"></label>
+        </div>
+        <label class="field"><span class="field__label">Adresse</span><textarea id="fi-adresse"></textarea></label>
+        <button class="btn btn--primary" id="fi-add">Hinzufügen</button>
+      </div>
+      <div class="card">
+        <h2>Firmen</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>E-Mail</th><th>Adresse</th><th></th></tr></thead>
+          <tbody id="fi-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- KARTE -->
+    <div class="tab-panel hidden" data-panel="karte">
+      <div class="card">
+        <div class="flex" style="margin-bottom:12px"><h2 style="margin:0">Fotostandorte</h2><span class="spacer"></span><span class="muted" id="map-count"></span></div>
+        <div id="map"></div>
+        <p class="muted mt" style="font-size:13px">Zeigt alle Fotos mit GPS-Daten. Punkte mit vielen Fotos am exakt gleichen Ort können auf Auffälligkeiten hindeuten.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal: Fotos -->
+<div class="modal-overlay" id="modal-fotos">
+  <div class="modal modal--wide">
+    <button class="modal__close" data-close>✕</button>
+    <h3 id="fotos-title">Fotos</h3>
+    <div class="gallery" id="fotos-gallery"></div>
+  </div>
+</div>
+
+<!-- Modal: Bearbeiten -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <button class="modal__close" data-close>✕</button>
+    <h3 id="edit-title">Bearbeiten</h3>
+    <div id="edit-body"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module" src="assets/js/admin.js"></script>
+<script>
+  (function () {
+    const root = document.documentElement;
+    try { const t = localStorage.getItem('pt-theme'); if (t) root.dataset.theme = t; } catch {}
+    document.getElementById('theme-btn').addEventListener('click', () => {
+      const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'light' : 'dark';
+      try { localStorage.setItem('pt-theme', root.dataset.theme); } catch {}
+    });
+  })();
+</script>
+</body>
+</html>

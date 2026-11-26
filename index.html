@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlakatTrack – Fotos einreichen</title>
+<meta name="description" content="Plakate dokumentieren: Fotos mit Standort einreichen.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📌</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="brand">
+      <span class="brand__logo">📌</span>
+      <span>PlakatTrack<small>Fotos einreichen</small></span>
+    </div>
+    <span class="app-header__spacer"></span>
+    <button class="btn btn--sm btn--ghost" id="theme-btn" title="Hell/Dunkel">🌓</button>
+    <a class="btn btn--sm" href="admin.html">Admin</a>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Plakate einreichen</h2>
+    <p class="sub">Wähle dich und die Veranstaltung, lade deine Fotos hoch und sende sie ab.</p>
+
+    <div class="row cols-2">
+      <label class="field">
+        <span class="field__label">Mitarbeiter</span>
+        <select id="sel-ma"><option value="">Bitte wählen …</option></select>
+      </label>
+      <label class="field">
+        <span class="field__label">Veranstaltung</span>
+        <select id="sel-event"><option value="">Bitte wählen …</option></select>
+      </label>
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      <div style="font-size:30px">📷</div>
+      <p><strong>Fotos auswählen</strong> oder hierher ziehen</p>
+      <p class="muted" id="dz-count" style="font-size:13px"></p>
+      <input type="file" id="file-input" accept="image/*" multiple hidden>
+    </div>
+
+    <div class="thumbs" id="thumbs"></div>
+
+    <div class="progress hidden" id="progress"><div class="progress__bar" id="progress-bar"></div></div>
+
+    <div class="msg msg--error hidden" id="err"></div>
+    <div class="msg msg--success hidden" id="ok"></div>
+
+    <button class="btn btn--primary btn--block mt" id="submit-btn">Einreichen</button>
+  </div>
+
+  <p class="footer-note">PlakatTrack · <a href="admin.html">Admin-Bereich</a></p>
+</main>
+
+<script type="module" src="assets/js/public.js"></script>
+<script>
+  // Theme-Umschalter (nur fuer diesen Besucher gespeichert)
+  (function () {
+    const root = document.documentElement;
+    try { const t = localStorage.getItem('pt-theme'); if (t) root.dataset.theme = t; } catch {}
+    document.getElementById('theme-btn').addEventListener('click', () => {
+      const cur = root.dataset.theme === 'dark' ? 'dark'
+        : root.dataset.theme === 'light' ? 'light'
+        : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('pt-theme', next); } catch {}
+    });
+  })();
+</script>
+</body>
+</html>
