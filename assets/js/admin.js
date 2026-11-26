@@ -4,6 +4,10 @@ const META = 'id,mitarbeiter,event_id,event_name,anzahl,foto_meta,foto_hashes,wa
 let events = [], mitarbeiter = [], firmen = [], zahlungen = [], einr = [];
 let map, mapLayer;
 
+// Farbpalette: je Event eine eigene Farbe
+const EVENT_COLORS = ['#3257e8','#e8730a','#1f9d57','#d8442f','#8b43e8','#0aa5c7',
+  '#c7a00a','#d6337d','#2a9d8f','#7048e8','#e85d04','#4a7c17','#b5179e','#007f5f','#9c6644','#ef476f'];
+
 /* ---------- AUTH ---------- */
 const loginView = $('#login-view'), adminView = $('#admin-view');
 const loginErr = $('#login-err'), loginInfo = $('#login-info');
@@ -133,7 +137,7 @@ function renderEinr() {
   $('#einr-body').innerHTML = g.map(e => {
     const uniq = [...new Set(e.warnings || [])];
     const warn = uniq.length
-      ? `<span class="pill pill--warn" data-warn='${escapeHtml(JSON.stringify(uniq))}'>⚠ ${uniq.length} ansehen</span>`
+      ? `<span class="pill pill--warn" data-wfotos='${escapeHtml(JSON.stringify(e.ids))}' data-wtitle="${escapeHtml(e.mitarbeiter + ' · ' + e.event_name)}" data-warn='${escapeHtml(JSON.stringify(uniq))}'>⚠ ${uniq.length} Fotos prüfen</span>`
       : `<span class="pill pill--ok">✓ OK</span>`;
     return `<tr>
       <td>${escapeHtml(e.mitarbeiter)}</td>
@@ -146,7 +150,7 @@ function renderEinr() {
     </tr>`;
   }).join('') || `<tr><td colspan="7" class="center muted">Keine Einreichungen</td></tr>`;
 
-  $$('#einr-body .pill--warn').forEach(p => p.addEventListener('click', () => showWarnings(JSON.parse(p.dataset.warn))));
+  $$('#einr-body .pill--warn').forEach(p => p.addEventListener('click', () => openFotos(JSON.parse(p.dataset.wfotos), p.dataset.wtitle, JSON.parse(p.dataset.warn))));
   $$('#einr-body [data-fotos]').forEach(b => b.addEventListener('click', () => openFotos(JSON.parse(b.dataset.fotos), b.dataset.title)));
   $$('#einr-body [data-del]').forEach(b => b.addEventListener('click', () => delEinr(JSON.parse(b.dataset.del))));
 }
@@ -157,19 +161,22 @@ function showWarnings(list) {
   $('#edit-body').innerHTML = `<ul style="margin:0;padding-left:18px;line-height:1.9">${list.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`;
 }
 
-async function openFotos(ids, title) {
+async function openFotos(ids, title, warnings = []) {
   openModal('#modal-fotos');
   $('#fotos-title').textContent = title || 'Fotos';
   const gal = $('#fotos-gallery');
-  gal.innerHTML = '<p class="muted">Lade Fotos …</p>';
+  const warnHtml = (warnings && warnings.length)
+    ? `<div class="msg msg--info" style="grid-column:1/-1;margin:0 0 4px">⚠ ${warnings.map(escapeHtml).join(' · ')}</div>`
+    : '';
+  gal.innerHTML = warnHtml + '<p class="muted" style="grid-column:1/-1">Lade Fotos …</p>';
   const { data } = await supabase.from('einreichungen').select('fotos,foto_meta').in('id', ids);
   const imgs = [];
   (data || []).forEach(r => (r.fotos || []).forEach((src, i) => imgs.push({ src, gps: r.foto_meta?.[i]?.gps })));
-  gal.innerHTML = imgs.length ? imgs.map(im => {
+  gal.innerHTML = warnHtml + (imgs.length ? imgs.map(im => {
     const link = im.gps ? `https://maps.google.com/?q=${im.gps.lat},${im.gps.lon}` : null;
     const img = `<img loading="lazy" src="${im.src}" alt="">`;
     return link ? `<a href="${link}" target="_blank" rel="noopener" title="Auf Karte zeigen">${img}</a>` : `<a>${img}</a>`;
-  }).join('') : '<p class="muted">Keine Fotos.</p>';
+  }).join('') : '<p class="muted" style="grid-column:1/-1">Keine Fotos.</p>');
 }
 
 async function delEinr(ids) {
@@ -334,22 +341,52 @@ function invoice(firmaId) {
 
 /* ---------- KARTE ---------- */
 function renderMap() {
-  const pts = [];
-  einr.forEach(e => (e.foto_meta || []).forEach(m => { if (m?.gps?.lat != null) pts.push({ ...m.gps, label: `${e.mitarbeiter} · ${e.event_name}` }); }));
-  $('#map-count').textContent = `${pts.length} Fotos mit GPS`;
+  // Nur aktive (nicht beendete) Veranstaltungen
+  const activeNames = new Set(events.filter(e => (e.status ?? 'aktiv') !== 'beendet').map(e => e.name));
+  // Feste Farbe je Event
+  const sorted = [...activeNames].sort();
+  const colorOf = {};
+  sorted.forEach((n, i) => { colorOf[n] = EVENT_COLORS[i % EVENT_COLORS.length]; });
+
+  // GPS-Punkte je aktivem Event sammeln
+  const byEvent = {};
+  einr.forEach(e => {
+    if (!activeNames.has(e.event_name)) return;
+    (e.foto_meta || []).forEach(m => {
+      if (m?.gps?.lat != null) (byEvent[e.event_name] ??= []).push({ lat: m.gps.lat, lon: m.gps.lon, ma: e.mitarbeiter });
+    });
+  });
+
+  const totalPts = Object.values(byEvent).reduce((s, a) => s + a.length, 0);
+  $('#map-count').textContent = `${totalPts} Fotos · ${Object.keys(byEvent).length} aktive Events`;
+
   if (!map) {
     map = L.map('map').setView([51.96, 7.63], 11); // Münster
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
   }
   if (mapLayer) mapLayer.remove();
   mapLayer = L.layerGroup().addTo(map);
+
   const bounds = [];
-  pts.forEach(p => {
-    L.circleMarker([p.lat, p.lon], { radius: 6, color: '#3257e8', fillColor: '#3257e8', fillOpacity: .6, weight: 1 })
-      .bindPopup(escapeHtml(p.label)).addTo(mapLayer);
-    bounds.push([p.lat, p.lon]);
+  Object.entries(byEvent).forEach(([name, pts]) => {
+    const col = colorOf[name];
+    pts.forEach(p => {
+      L.circleMarker([p.lat, p.lon], { radius: 6, color: col, fillColor: col, fillOpacity: .75, weight: 1 })
+        .bindPopup(`<b>${escapeHtml(name)}</b><br>${escapeHtml(p.ma)}`).addTo(mapLayer);
+      bounds.push([p.lat, p.lon]);
+    });
   });
   if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+
+  // Legende mit Zählung je Event (meiste zuerst)
+  const legend = Object.entries(byEvent)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([name, pts]) => `<span class="pill" style="background:var(--surface-2)">
+      <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${colorOf[name]}"></span>
+      ${escapeHtml(name)}: <b>${pts.length}</b></span>`).join(' ');
+  const host = $('#map-legend');
+  if (host) host.innerHTML = legend || '<span class="muted">Keine aktiven Veranstaltungen mit GPS-Fotos.</span>';
+
   setTimeout(() => map.invalidateSize(), 60);
 }
 
