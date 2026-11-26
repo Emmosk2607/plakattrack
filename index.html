@@ -22,6 +22,8 @@
 </header>
 
 <main>
+  <div class="card" id="motm-card" style="display:none"><div id="motm"></div></div>
+
   <div class="card">
     <h2>Plakate einreichen</h2>
     <p class="sub">Wähle dich und die Veranstaltung, lade deine Fotos hoch und sende sie ab.</p>
@@ -54,10 +56,16 @@
     <button class="btn btn--primary btn--block mt" id="submit-btn">Einreichen</button>
   </div>
 
+  <div class="card" id="rangliste-card" style="display:none">
+    <h2>🏆 Rangliste</h2>
+    <p class="sub">Wer hat die meisten Plakate eingereicht?</p>
+    <div id="rangliste"></div>
+  </div>
+
   <p class="footer-note">PlakatTrack · <a href="admin.html">Admin-Bereich</a></p>
 </main>
 
-<script type="module" src="assets/js/public.js"></script>
+<script type="module" src="assets/js/public.js?v=2"></script>
 <script>
   // Theme-Umschalter (nur fuer diesen Besucher gespeichert)
   (function () {

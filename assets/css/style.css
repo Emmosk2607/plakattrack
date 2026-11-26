@@ -222,3 +222,49 @@ tr:last-child td { border-bottom: none; }
 
 .footer-note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 26px; }
 .footer-note a { color: var(--accent); }
+
+/* --- Rangliste + Mitarbeiter des Monats --- */
+.motm {
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 35%, var(--surface)));
+  border-radius: var(--radius); padding: 6px 4px;
+}
+.motm__avatar, .motm__initials { width: 76px; height: 76px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); flex-shrink: 0; }
+.motm__initials { display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 27px; }
+.motm__label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .03em; }
+.motm__name { font-size: 23px; font-weight: 700; letter-spacing: -.01em; margin: 1px 0; }
+.motm__count { color: var(--muted); font-size: 13px; }
+
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.rank-row:last-child { border-bottom: none; }
+.rank-pos { width: 32px; text-align: center; font-weight: 700; font-size: 17px; flex-shrink: 0; }
+.rank-avatar, .rank-initials { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--border); }
+.rank-initials { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); font-weight: 700; font-size: 14px; }
+.rank-main { flex: 1; min-width: 0; }
+.rank-name { font-weight: 600; }
+.rank-bar-wrap { height: 7px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+.rank-bar { height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #9b5cff)); border-radius: 99px; transition: width .4s; }
+.rank-today { font-size: 11px; color: var(--success); margin-top: 3px; font-weight: 600; }
+.rank-count { font-weight: 700; font-size: 18px; flex-shrink: 0; min-width: 34px; text-align: right; }
+
+/* --- Rangliste: modernes Styling (Override) --- */
+.rank-row { display:flex; align-items:center; gap:14px; padding:12px; border-radius:14px; border-bottom:none; transition:background .15s, transform .1s; }
+.rank-row + .rank-row { margin-top:4px; }
+.rank-row:hover { background:var(--surface-2); }
+.rank-row--top { background:var(--surface-2); }
+.rank-row--first {
+  background:linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 20%, transparent));
+  border:1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+}
+.rank-badge {
+  width:32px; height:32px; border-radius:50%; display:grid; place-items:center;
+  font-weight:800; font-size:14px; flex-shrink:0;
+  background:var(--surface-2); color:var(--muted); border:1px solid var(--border);
+}
+.rank-badge--1 { background:linear-gradient(135deg,#ffdd6b,#f0a500); color:#5a3b00; border:none; box-shadow:0 3px 10px rgba(240,165,0,.45); }
+.rank-badge--2 { background:linear-gradient(135deg,#eef2f8,#aab4c4); color:#36404f; border:none; box-shadow:0 2px 8px rgba(120,130,150,.3); }
+.rank-badge--3 { background:linear-gradient(135deg,#f3b982,#c87f3e); color:#4a2a0e; border:none; box-shadow:0 2px 8px rgba(200,127,62,.35); }
+.rank-crown { font-size:15px; margin-left:3px; }
+.rank-count { display:flex; flex-direction:column; align-items:flex-end; line-height:1.1; }
+.rank-count__label { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+.rank-avatar, .rank-initials { width:46px; height:46px; }

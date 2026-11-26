@@ -8,6 +8,15 @@ let map, mapLayer;
 const EVENT_COLORS = ['#3257e8','#e8730a','#1f9d57','#d8442f','#8b43e8','#0aa5c7',
   '#c7a00a','#d6337d','#2a9d8f','#7048e8','#e85d04','#4a7c17','#b5179e','#007f5f','#9c6644','#ef476f'];
 
+// Datum aus EXIF-Zeitstempel ("YYYY:MM:DD HH:MM:SS") hübsch, sonst Fallback (zeit)
+function fmtDate(ts, fallback) {
+  if (ts) {
+    const m = String(ts).match(/^(\d{4})[:-](\d{2})[:-](\d{2})[ T](\d{2}):(\d{2})/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]} ${m[4]}:${m[5]}`;
+  }
+  return fallback || '';
+}
+
 /* ---------- AUTH ---------- */
 const loginView = $('#login-view'), adminView = $('#admin-view');
 const loginErr = $('#login-err'), loginInfo = $('#login-info');
@@ -354,7 +363,7 @@ function renderMap() {
   einr.forEach(e => {
     if (!activeNames.has(e.event_name)) return;
     (e.foto_meta || []).forEach(m => {
-      if (m?.gps?.lat != null) (byMa[e.mitarbeiter] ??= []).push({ lat: m.gps.lat, lon: m.gps.lon, ev: e.event_name });
+      if (m?.gps?.lat != null) (byMa[e.mitarbeiter] ??= []).push({ lat: m.gps.lat, lon: m.gps.lon, ev: e.event_name, date: fmtDate(m.timestamp, e.zeit) });
     });
   });
 
@@ -373,7 +382,7 @@ function renderMap() {
     const col = colorOf(ma);
     pts.forEach(p => {
       L.circleMarker([p.lat, p.lon], { radius: 6, color: col, fillColor: col, fillOpacity: .75, weight: 1 })
-        .bindPopup(`<b>${escapeHtml(ma)}</b><br>${escapeHtml(p.ev)}`).addTo(mapLayer);
+        .bindPopup(`<b>${escapeHtml(ma)}</b><br>${escapeHtml(p.ev)}<br><span style="color:#888">📅 ${escapeHtml(p.date || '—')}</span>`).addTo(mapLayer);
       bounds.push([p.lat, p.lon]);
     });
   });

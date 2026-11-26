@@ -1,5 +1,6 @@
 import { supabase, CHUNK, $, escapeHtml } from './config.js';
 import { getExifData, compressToDataUrl, detectWarnings, simpleHash } from './exif.js';
+import { MA_FOTOS } from './fotos.js';
 
 let events = [];
 let pending = [];          // { dataUrl, previewUrl, gps, timestamp, hash, name }
@@ -27,9 +28,86 @@ async function init() {
       .filter(e => (e.status ?? 'aktiv') === 'aktiv')
       .forEach(e => els.event.add(new Option(e.name, e.id)));
     loadStoredHashes();
+    loadRangliste();
   } catch (e) {
     showErr('Verbindung zur Datenbank fehlgeschlagen. Bitte Seite neu laden.');
     console.error(e);
+  }
+}
+
+// --- Mitarbeiter-Avatare ---
+const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+function maFoto(name) {
+  const n = (name || '').toLowerCase();
+  const k = Object.keys(MA_FOTOS).find(k => n === k || n.split(/\s+/)[0] === k || n.includes(k));
+  return k ? MA_FOTOS[k] : null;
+}
+function avatarHtml(name, imgCls, iniCls) {
+  const f = maFoto(name);
+  if (f) return `<img class="${imgCls}" src="${f}" alt="">`;
+  const ini = (name || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+  return `<div class="${iniCls}">${escapeHtml(ini)}</div>`;
+}
+
+// --- Rangliste + Mitarbeiter des Monats ---
+async function loadRangliste() {
+  try {
+    const { data } = await supabase.from('einreichungen').select('mitarbeiter,anzahl,created_at').order('created_at', { ascending: false });
+    const all = data || [];
+    if (!all.length) return;
+    const today = new Date().toLocaleDateString('de-DE');
+    const totals = {}, todayMap = {};
+    all.forEach(e => {
+      totals[e.mitarbeiter] = (totals[e.mitarbeiter] || 0) + (e.anzahl || 0);
+      if (new Date(e.created_at).toLocaleDateString('de-DE') === today)
+        todayMap[e.mitarbeiter] = (todayMap[e.mitarbeiter] || 0) + (e.anzahl || 0);
+    });
+    renderMotm(all);
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    const max = sorted[0][1] || 1;
+    const medals = ['🥇', '🥈', '🥉'];
+    $('#rangliste').innerHTML = sorted.map(([name, count], i) => {
+      const pct = Math.round(count / max * 100);
+      const t = todayMap[name] || 0;
+      const rowCls = i === 0 ? 'rank-row rank-row--first' : (i < 3 ? 'rank-row rank-row--top' : 'rank-row');
+      return `<div class="${rowCls}">
+        <div class="rank-badge rank-badge--${i + 1}">${i + 1}</div>
+        ${avatarHtml(name, 'rank-avatar', 'rank-initials')}
+        <div class="rank-main">
+          <div class="rank-name">${escapeHtml(name)}${i === 0 ? '<span class="rank-crown">👑</span>' : ''}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%"></div></div>
+          ${t > 0 ? `<div class="rank-today">+${t} heute</div>` : ''}
+        </div>
+        <div class="rank-count">${count}<span class="rank-count__label">Plakate</span></div>
+      </div>`;
+    }).join('');
+    $('#rangliste-card').style.display = '';
+  } catch (e) { console.warn('Rangliste:', e); }
+}
+
+function renderMotm(all) {
+  const now = new Date();
+  for (let back = 0; back < 2; back++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const map = {};
+    all.forEach(e => {
+      const c = new Date(e.created_at);
+      if (c.getFullYear() === d.getFullYear() && c.getMonth() === d.getMonth())
+        map[e.mitarbeiter] = (map[e.mitarbeiter] || 0) + (e.anzahl || 0);
+    });
+    const top = Object.entries(map).sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      $('#motm').innerHTML = `<div class="motm">
+        ${avatarHtml(top[0], 'motm__avatar', 'motm__initials')}
+        <div>
+          <div class="motm__label">⭐ MITARBEITER DES MONATS · ${MONATE[d.getMonth()]} ${d.getFullYear()}</div>
+          <div class="motm__name">${escapeHtml(top[0])}</div>
+          <div class="motm__count">${top[1]} Plakate im ${MONATE[d.getMonth()]}</div>
+        </div>
+      </div>`;
+      $('#motm-card').style.display = '';
+      return;
+    }
   }
 }
 
